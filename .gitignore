@@ -1,0 +1,9 @@
+# Python venv
+/venv*
+
+# IDE
+/.vscode
+
+# Python
+__pycache__/
+
