@@ -34,6 +34,7 @@ def load_csv_data(
     Returns:
         a pandas dataframe consolidating thedataof all files provided
     """
+    date_format = "%d/%m/%Y"
     if not all([isinstance(arg, FileDef) for arg in file_defs]):
         raise TypeError("file_defs must be of class FileDef")
     if load_using_pandas:
@@ -43,6 +44,8 @@ def load_csv_data(
             colname = file_def.colname
             temp_df = pd.read_csv(filename)
             temp_df.columns = ["date", colname]
+            temp_df[colname] = pd.to_numeric(temp_df[colname])
+            temp_df["date"] = pd.to_datetime(temp_df["date"])
             if df is None:
                 df = temp_df
             else:
@@ -58,9 +61,9 @@ def load_csv_data(
                     str_date = row[date_colname]
                     if str_date not in hash_output:
                         hash_output[str_date] = {
-                            "date": datetime.datetime.strptime(str_date, "%d/%m/%Y")
+                            "date": datetime.datetime.strptime(str_date, date_format)
                         }
-                    hash_output[str_date][colname] = row[main_colname]
+                    hash_output[str_date][colname] = float(row[main_colname])
         df = pd.DataFrame(hash_output.values())
     return df
 
@@ -71,4 +74,5 @@ def timed(func):
         func(*args, **kwargs)
         end = time.time()
         return end - start
+
     return wrapper
