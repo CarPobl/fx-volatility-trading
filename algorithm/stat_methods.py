@@ -65,16 +65,18 @@ def calc_moving_percentile(arr: np.ndarray, window_size: int) -> np.ndarray:
     return output
 
 
-def forecast_vol(levels: np.ndarray, vol_0: float, model_name: str, **params) -> np.ndarray:
+def forecast_vol(
+    levels: np.ndarray, vol_0: float, model_name: str, **params
+) -> np.ndarray:
     if model_name.lower() == "ema":
         log_returns = calc_log_returns(levels)
         λ = params["l"]
         ema_vols = np.zeros(len(levels))
         ema_vols[0] = vol_0
         for i, r in enumerate(log_returns):
-            ema_vols[i + 1] =  (λ * ema_vols[i]**2 + (1 - λ) * r**2)**(0.5)
+            ema_vols[i + 1] = (λ * ema_vols[i] ** 2 + (1 - λ) * r ** 2) ** (0.5)
         return ema_vols
-    
-    #  TODO: Implement further vol forecast models 
+
+    #  TODO: Implement further vol forecast models
     else:
         raise ValueError(f"Unkown model_name '{model_name}'.")

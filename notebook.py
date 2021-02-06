@@ -4,7 +4,7 @@ from algorithm import VOL_DATA_FILE
 from algorithm.utils import load_csv_data, FileDef
 from algorithm.stat_methods import (
     calc_moving_annual_realised_vol,
-    calc_moving_percentile
+    calc_moving_percentile,
 )
 
 import numpy as np
@@ -21,7 +21,7 @@ file_defs = [
 df = load_csv_data(*file_defs)
 
 
-# Clean data 
+# Clean data
 df.sort_values(by="date", ascending=True, inplace=True)
 df["1y_atmf_vol"] = df["1y_atmf_vol"] / 100
 df.dropna(inplace=True)

@@ -3,7 +3,7 @@ from algorithm.stat_methods import (
     sum_squares_moving_window,
     calc_moving_annual_realised_vol,
     calc_moving_percentile,
-    forecast_vol
+    forecast_vol,
 )
 
 import numpy as np
