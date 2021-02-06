@@ -1,5 +1,5 @@
 import os
-from utils import FileDef
+from algorithm.utils import FileDef
 
 MARKET_DATA_DIR = os.path.join("tests", "test_data")
 SPOT_DATA_FILE = os.path.join(MARKET_DATA_DIR, "EURUSDxSPOT.csv")

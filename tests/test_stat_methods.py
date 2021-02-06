@@ -1,9 +1,9 @@
-from stat_methods import (
+from algorithm.stat_methods import (
     calc_annual_realised_vol,
     sum_squares_moving_window,
     calc_moving_annual_realised_vol,
 )
-from utils import load_csv_data
+from algorithm.utils import load_csv_data
 import numpy as np
 
 from . import FILE_DEFS
@@ -32,7 +32,7 @@ def test_sum_squares_moving_window():
 
 def test_calc_moving_annual_realised_vol():
     global simple_levels, expected_moving_reslised_vol
-    results = calc_moving_annual_realised_vol(simple_levels, 3, True)
+    results = calc_moving_annual_realised_vol(simple_levels, 3, False)
     assert all(np.round(results, 3) == expected_moving_reslised_vol)
-
+    
     

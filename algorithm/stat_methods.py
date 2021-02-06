@@ -3,7 +3,6 @@ import math
 
 
 def calc_annual_realised_vol(levels: np.ndarray) -> np.ndarray:
-    zeros = np.count_nonzero(levels==0)
     n = len(levels)
     levels_t_minus1 = np.zeros(n)
     levels_t_minus1[1:] = levels[:-1]

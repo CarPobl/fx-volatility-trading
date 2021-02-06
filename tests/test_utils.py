@@ -1,4 +1,4 @@
-from utils import load_csv_data, timed
+from algorithm.utils import load_csv_data, timed
 from . import FILE_DEFS
 
 performance_iterations = 10
