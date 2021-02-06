@@ -2,11 +2,16 @@ import numpy as np
 import math
 
 
-def calc_annual_realised_vol(levels: np.ndarray) -> np.ndarray:
+def calc_log_returns(levels: np.ndarray):
     n = len(levels)
     levels_t_minus1 = np.zeros(n)
     levels_t_minus1[1:] = levels[:-1]
-    log_returns = np.log((levels / levels_t_minus1)[1:])
+    return np.log((levels / levels_t_minus1)[1:])
+
+
+def calc_annual_realised_vol(levels: np.ndarray) -> np.ndarray:
+    n = len(levels)
+    log_returns = calc_log_returns(levels)
     return math.sqrt(252 * np.matmul(log_returns, log_returns.T) / n)
 
 
@@ -58,3 +63,18 @@ def calc_moving_percentile(arr: np.ndarray, window_size: int) -> np.ndarray:
         output[i + window_size - 1] = calc_percentile(in_arr, value)
         i += 1
     return output
+
+
+def forecast_vol(levels: np.ndarray, vol_0: float, model_name: str, **params) -> np.ndarray:
+    if model_name.lower() == "ema":
+        log_returns = calc_log_returns(levels)
+        λ = params["l"]
+        ema_vols = np.zeros(len(levels))
+        ema_vols[0] = vol_0
+        for i, r in enumerate(log_returns):
+            ema_vols[i + 1] =  (λ * ema_vols[i]**2 + (1 - λ) * r**2)**(0.5)
+        return ema_vols
+    
+    #  TODO: Implement further vol forecast models 
+    else:
+        raise ValueError(f"Unkown model_name '{model_name}'.")

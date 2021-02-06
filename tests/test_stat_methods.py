@@ -3,8 +3,9 @@ from algorithm.stat_methods import (
     sum_squares_moving_window,
     calc_moving_annual_realised_vol,
     calc_moving_percentile,
+    forecast_vol
 )
-from algorithm.utils import load_csv_data
+
 import numpy as np
 
 from . import FILE_DEFS
@@ -37,3 +38,9 @@ def test_calc_moving_perentile():
         results[window_size - 1 :]
         == test_data.expected_implied_vol_percentiles[window_size - 1 :]
     )
+
+
+def test_ema_forecast():
+    vol_0 = 0.210
+    results = forecast_vol(test_data.dummy_levels, vol_0, "ema", l=0.9)
+    assert all(np.round(results, 3) == test_data.expected_ema_forecast)

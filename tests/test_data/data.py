@@ -21,3 +21,8 @@ dummy_implied_vols = np.array([0.8, 0.6, 0.2, 0.1, 0.9, 0.7, 0.5, 0.4, 0.7, 0.3]
 expected_implied_vol_percentiles = np.array(
     [np.NaN, np.NaN, 0, 0, 2 / 3, 1 / 3, 0, 0, 2 / 3, 0]
 )
+
+
+expected_ema_forecast = np.array(
+    [0.21, 0.199, 0.189, 0.180, 0.170, 0.162, 0.154, 0.147, 0.139, 0.132]
+)
