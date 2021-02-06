@@ -34,5 +34,7 @@ def test_calc_moving_annual_realised_vol():
     global simple_levels, expected_moving_reslised_vol
     results = calc_moving_annual_realised_vol(simple_levels, 3, False)
     assert all(np.round(results, 3) == expected_moving_reslised_vol)
+    results = calc_moving_annual_realised_vol(simple_levels, 3, True)
+    assert all(np.round(results, 3) == expected_moving_reslised_vol)
     
     

@@ -40,4 +40,4 @@ def calc_moving_annual_realised_vol(
         levels_t_minus1[1:] = levels[:-1]
         log_returns = np.log((levels / levels_t_minus1)[1:])
         summed_squares = sum_squares_moving_window(log_returns, window_size)
-        return np.sqrt(252 * summed_squares / (n - 1))
+        return np.sqrt(252 * summed_squares / (window_size + 1))
