@@ -6,73 +6,77 @@ from algorithm.stat_methods import (
     calc_moving_annual_realised_vol,
     calc_moving_percentile,
     forecast_vol,
+    gridiserFactory,
 )
-from algorithm.trade_classes import (
-    VarianceSwap
-)
+from algorithm.trade_classes import VarianceSwap
 
 import numpy as np
 import pandas as pd
 from datetime import timedelta
 
 
-window_size = 252  # 1Y
+swap_window_size = 21  # 1M (in business_days)
+percentile_window_size = 252  # 1Y (in business_days)
 ema_lambda = 0.97
+
+
+T_swap = swap_window_size / 252  # (in years)
 
 
 # Load Market data
 file_defs = [
     FileDef(filename=SPOT_DATA_FILE, colname="spot"),
-    FileDef(filename=VOL_DATA_FILE, colname="1y_atmf_vol"),
+    FileDef(filename=VOL_DATA_FILE, colname="1m_annualised_atmf_vol"),
 ]
 df = load_csv_data(*file_defs)
 
 
 # Clean data
 df.sort_values(by="date", ascending=True, inplace=True)
-df["1y_atmf_vol"] = df["1y_atmf_vol"] / 100
+df["1m_annualised_atmf_vol"] = df["1m_annualised_atmf_vol"] / 100
+df["1m_atmf_vol"] = df["1m_annualised_atmf_vol"] * (swap_window_size / 252) ** 0.5
 df.dropna(inplace=True)
-df["1y_atmf_vol_1y_prior"] = np.NaN
-df["1y_atmf_vol_1y_prior"][window_size:] = df["1y_atmf_vol"][:-window_size]
+# df["1m_atmf_vol_1m_prior"] = np.NaN
+# df["1m_atmf_vol_1m_prior"][swap_window_size:] = df["1m_atmf_vol"][:-swap_window_size]
 
 
 # Calculate realised volatility using a 1-year window
-df["1y_realised_vol"] = np.NaN
-df["1y_realised_vol"][1:] = calc_moving_annual_realised_vol(
-    np.array(df["spot"]), window_size
+df["1m_realised_annualised_vol"] = np.NaN
+df["1m_realised_annualised_vol"][1:] = calc_moving_annual_realised_vol(
+    np.array(df["spot"]), swap_window_size
 )
 
 
 # Create a trade to be traded every day at the fair strike K,
-# with a variance notional of 1, and maturing in 1Y.
+# with a variance notional of 1, and maturing in 1M.
 # For this, calculate K_fair using a rule-of-thumb described
 # Bassu-Strasser-Guichard Varswap paper.
 
 # Although not a fair assumption, there is no enough market data
 # to estimatethis value. It would have been possible if volatility
 # data for different deltas was provided.
-skew_slope = 0 
+skew_slope = 0
 
 # We also calculate the payoff at maturity of each trade, distinguishing
 # between those that are profitable and those that are not.
 
-# TODO: loop belowis very inefficient. Implement efficient algorithm
 latest_date = df["date"].max()
 fair_trades = [np.NaN] * df.shape[0]
 payoffs = [np.NaN] * df.shape[0]
+# TODO: loop below is very inefficient. Implement efficient algorithm
 for indx, pair in enumerate(df.iterrows()):
     row = pair[1]
-    if np.isnan(row["1y_atmf_vol"]) or np.isnan(row["spot"]):
+    if np.isnan(row["1m_atmf_vol"]) or np.isnan(row["spot"]):
         continue
     fair_strike = VarianceSwap.estimate_fair_strike(
-        row["1y_atmf_vol"], T=1, skew_slope=skew_slope
+        row["1m_annualised_atmf_vol"], T=T_swap, skew_slope=skew_slope
     )
-    
+
     trade = VarianceSwap(
         direction="buy",
         underlying="EURUSD",
         trade_date=row["date"],
-        value_date=row["date"] + timedelta(days=365),
+        value_date=row["date"] + timedelta(days=round(365 * T_swap)),
         strike=fair_strike,
         vega_amount=1,
     )
@@ -83,7 +87,7 @@ for indx, pair in enumerate(df.iterrows()):
     # does.
     dates_in_trade = (df["date"] > trade.trade_date) & (df["date"] <= trade.value_date)
     levels = np.array(df.loc[dates_in_trade, "spot"])
-    
+
     # If the expiry date later than the latest date in the dataframe, then break
     if latest_date < trade.value_date:
         break
@@ -97,20 +101,78 @@ df["payoff"] = payoffs
 # Calculate implied volatility percentile for a 1-year window
 df["1y_implied_vol_percentile"] = np.NaN
 df["1y_implied_vol_percentile"] = calc_moving_percentile(
-    np.array(df["1y_atmf_vol"]), window_size
+    np.array(df["1m_atmf_vol"]), percentile_window_size
 )
 df.dropna(inplace=True)
 
 
-# Calculate forecasted 1Y realised EMA vol
-vol_0 = df["1y_realised_vol"].iloc[0]
-df["1y_realised_ema_vol"] = forecast_vol(
+# Calculate forecasted 1M realised EMA vol
+vol_0 = df["1m_realised_annualised_vol"].iloc[0] / (
+    12 ** 0.5
+)  # From annualised to monthly
+df["1m_realised_ema_vol_forecast"] = forecast_vol(
     np.array(df["spot"]), "ema", vol_0=vol_0, l=ema_lambda
 )
 
 
 # Calculate Vol Carry
-df["vol_carry"] = df["1y_atmf_vol_1y_prior"] - df["1y_realised_ema_vol"]
+df["vol_carry"] = df["1m_atmf_vol"] - df["1m_realised_ema_vol_forecast"]
 
 
+# Clasify each row in grid cell:
+shape = (
+    {
+        "divisions": 20,
+        "max": df["1y_implied_vol_percentile"].max(),
+        "min": df["1y_implied_vol_percentile"].min(),
+    },
+    {"divisions": 20, "max": df["vol_carry"].max(), "min": df["vol_carry"].min()},
+)
+gridise = gridiserFactory(shape)
+df["cell"] = [
+    str(gridise(row["1y_implied_vol_percentile"], row["vol_carry"]))
+    for _, row in df.iterrows()
+]
+df.dropna(inplace=True)
+
+df["profitable"] = df["payoff"] > 0
+grouping_cols = ["cell", "1y_implied_vol_percentile", "vol_carry", "profitable"]
+aggreg_df = df[grouping_cols]
+
+avg_df = pd.pivot_table(
+    aggreg_df,
+    index=["cell"],
+    values=["1y_implied_vol_percentile", "vol_carry"],
+    aggfunc=np.average,
+)
+
+count_df = pd.pivot_table(
+    aggreg_df,
+    index=["cell"],
+    values="profitable",
+    aggfunc=len,
+)
+count_df.columns = ["total_count"]
+
+sum_df = pd.pivot_table(
+    aggreg_df,
+    index=["cell"],
+    values="profitable",
+    aggfunc=sum,
+)
+sum_df.columns = ["positive_count"]
+
+grouped_df = pd.concat([avg_df, count_df, sum_df], axis=1)
+grouped_df["hit_rate"] = grouped_df["positive_count"] / grouped_df["total_count"]
+
+print(grouped_df.head())
+
+
+# Plot heatmap
+import matplotlib.pyplot as plt
+
+
+vol_percentile = grouped_df["1y_implied_vol_percentile"]
+vol_carry = grouped_df["vol_carry"]
+hit_rate = grouped_df["positive_count"] / grouped_df["total_count"]
 
