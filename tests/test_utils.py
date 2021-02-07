@@ -17,7 +17,7 @@ def test_load_csv_data():
     assert data.count()["1y_atmf_vol"] == 3392
 
 
-def test_load_csv_data_performance():
+def performance_test_load_csv_data_performance():
     global FILE_DEFS, performance_iterations
 
     @timed

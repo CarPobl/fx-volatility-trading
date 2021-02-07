@@ -36,7 +36,7 @@ class Trade:
         [setattr(self, k, v) for k, v in kwargs.items()]
 
     def __str__(self) -> str:
-        return f"{self._direction} {self.underlying} | {self.trade_date} - {self.value_date}"
+        return f"{self.direction} {self.underlying} | {self.trade_date} - {self.value_date}"
 
     def __repr__(self) -> str:
         return str(self)
@@ -70,7 +70,7 @@ class Trade:
         return self._value_date
 
 
-class VolatilitySwap(Trade):
+class VarianceSwap(Trade):
     _strike = None
     _vega_amount = None
 
@@ -99,17 +99,17 @@ class VolatilitySwap(Trade):
 
     def __str__(self) -> str:
         return (
-            f"{self.underlying}: {self._direction} {self.vega_amount}"
+            f"{self.underlying}: {self.direction} {self.vega_amount}"
             f"@{self.strike} | {self.trade_date} - {self.value_date}"
         )
 
     def payoff(self, realised_vol: float) -> float:
         """Calculate the payoff at trade maturity
-            
-            Args:
-                realised_vol: the annualised realised volatility 
-                    calculated from trade inception 
-                    (see `VolatilitySwap.calc_final_realised_vol`)
+
+        Args:
+            realised_vol: the annualised realised volatility
+                calculated from trade inception
+                (see `VarianceSwap.calc_final_realised_vol`)
         """
         return self.var_amount * (realised_vol ** 2 - self.strike ** 2)
 
@@ -117,23 +117,24 @@ class VolatilitySwap(Trade):
         self, realised_vol: float, fair_strike: float, r: float, valuation_date: date
     ) -> float:
         """Calculate the mark-to-maket.
-            Args:
-                realised_vol: The annualised realised volatility from trade date
-                    to valuation_date.
-                fair_strike: The fair strike of a variance swap of same maturity
-                    date as current swap, issued at the same date as current swap.
-                r: The annualised, continuously compounded discount rate. 
-                valuation_date: date at which the mtm is calculated.
+
+        Args:
+            realised_vol: The annualised realised volatility from trade date
+                to valuation_date.
+            fair_strike: The fair strike of a variance swap of same maturity
+                date as current swap, issued at the same date as current swap.
+            r: The annualised, continuously compounded discount rate.
+            valuation_date: date at which the mtm is calculated.
         """
-        T = (self.value_date - self.trade_date).years
-        t = (valuation_date - self.trade_date).years
+        T = ((self.value_date - self.trade_date).days - 1) / 365
+        t = ((valuation_date - self.trade_date).days - 1) / 365
         mtm = (
             self.var_amount
-            * math.exp(-r * t)
+            * math.exp(-r * (T - t))
             * (
-                t / T * realised_vol ** 2
-                + (T - 1) / T * fair_strike ** 2
-                - self.strike ** 2
+                t / T * (realised_vol ** 2)
+                + (T - t) / T * (fair_strike ** 2)
+                - (self.strike ** 2)
             )
         )
         return mtm
@@ -143,15 +144,16 @@ class VolatilitySwap(Trade):
         vol_atmf: float, T: float, skew_slope: float, linear_skew: bool = True
     ) -> float:
         """Calculate the fair strike that would be traded.
-            Args:
-                vol_atmf: At-the-money forward volatility for 
-                    the duration of the trade.
-                T: The duration of the trade in years.
-                skew_slope: The slope of the skew curve. If the
-                    curve is log-linear, it is the slope of the
-                    log skew curve.
-            Kwargs:
-                linear_skew (default: True): False for log-linear skew
+
+        Args:
+            vol_atmf: At-the-money forward volatility for
+                the duration of the trade.
+            T: The duration of the trade in years.
+            skew_slope: The slope of the skew curve. If the
+                curve is log-linear, it is the slope of the
+                log skew curve.
+        Kwargs:
+            linear_skew (default: True): False for log-linear skew
         """
         if linear_skew:
             return vol_atmf * (1 + 3 * T * skew_slope ** 2) ** 0.5
@@ -162,17 +164,18 @@ class VolatilitySwap(Trade):
             return math.sqrt(
                 vol_atmf ** 2
                 + β * (vol_atmf ** 3) * T
-                + (β / 2)** 2
+                + (β / 2) ** 2
                 * (12 * (vol_atmf ** 2) * T + 5 * (vol_atmf ** 4) * T ** 2)
             )
 
     @staticmethod
     def calc_final_realised_vol(levels: np.ndarray) -> float:
         """Calculates the final realised volatility
-            Args:
-                levels: an array with the daily underlying asset
-                    prices. It must contain all the observations
-                    from trade inception to trade maturity. 
+
+        Args:
+            levels: an array with the daily underlying asset
+                prices. It must contain all the observations
+                from trade inception to trade maturity.
         """
         return calc_annual_realised_vol(levels)
 
