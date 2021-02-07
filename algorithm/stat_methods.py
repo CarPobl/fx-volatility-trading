@@ -1,3 +1,4 @@
+from typing import Any
 import numpy as np
 import math
 
@@ -85,10 +86,10 @@ def forecast_vol(levels: np.ndarray, model_name: str, **params) -> np.ndarray:
         raise ValueError(f"Unkown model_name '{model_name}'.")
 
 
-def gridiserFactory(shape):
+def gridiserFactory(shape: tuple) -> callable:
     arglength = len(shape)
 
-    def fit_cell(dim, val):
+    def fit_cell(dim: int, val: Any) -> int:
         divisions = shape[dim]["divisions"]
         max_val, min_val = shape[dim]["max"], shape[dim]["min"]
         if val > max_val or val < min_val:
@@ -97,8 +98,9 @@ def gridiserFactory(shape):
         for i in range(divisions):
             if normalised_val < 1 / divisions * (i + 1):
                 return i
+        return i
 
-    def gridise(*args):
+    def gridise(*args: Any) -> tuple:
         if len(args) != arglength:
             raise TypeError(
                 f"This gridiser accepts {arglength} parameters; "

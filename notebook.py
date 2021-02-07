@@ -165,14 +165,19 @@ sum_df.columns = ["positive_count"]
 grouped_df = pd.concat([avg_df, count_df, sum_df], axis=1)
 grouped_df["hit_rate"] = grouped_df["positive_count"] / grouped_df["total_count"]
 
+parse_tuple = lambda val: tuple(int(num) for num in
+    val.replace("'",'').replace('"','').replace('(','').replace(')','').split(",")
+)
+grouped_df["coordinates"] = [parse_tuple(val) for val in grouped_df.index]
+
 print(grouped_df.head())
 
 
 # Plot heatmap
 import matplotlib.pyplot as plt
 
-
 vol_percentile = grouped_df["1y_implied_vol_percentile"]
 vol_carry = grouped_df["vol_carry"]
 hit_rate = grouped_df["positive_count"] / grouped_df["total_count"]
 
+plt.imshow()
