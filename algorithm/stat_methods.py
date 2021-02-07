@@ -70,7 +70,7 @@ def calc_moving_percentile(arr: np.ndarray, window_size: int) -> np.ndarray:
 
 
 def forecast_vol(levels: np.ndarray, model_name: str, **params) -> np.ndarray:
-    # TODO: Review implementation
+    # TODO: Review implementation.
     if model_name.lower() == "ema":
         log_returns = calc_log_returns(levels)
         λ = params["l"]

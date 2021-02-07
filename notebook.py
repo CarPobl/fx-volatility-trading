@@ -122,6 +122,7 @@ df["vol_carry"] = df["1m_atmf_vol"] - df["1m_realised_ema_vol_forecast"]
 
 
 # Clasify each row in grid cell:
+# TODO: Encapsulate the below code and make more efficient.
 shape = (
     {
         "divisions": X_CELLS_IN_PLOT,
@@ -181,6 +182,8 @@ print(grouped_df.head())
 
 
 # Plot heatmap
+# TODO: Improve plot (turn upside down, label axes...)
+
 import matplotlib.pyplot as plt
 
 heat_matrix = pandas_to_heatmap_matrix(grouped_df, "coordinates", "hit_rate")
