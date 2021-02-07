@@ -19,7 +19,8 @@ from datetime import timedelta
 swap_window_size = 21  # 1M (in business_days)
 percentile_window_size = 252  # 1Y (in business_days)
 ema_lambda = 0.97
-
+X_CELLS_IN_PLOT = 20
+Y_CELLS_IN_PLOT = 30
 
 T_swap = swap_window_size / 252  # (in years)
 
@@ -123,11 +124,11 @@ df["vol_carry"] = df["1m_atmf_vol"] - df["1m_realised_ema_vol_forecast"]
 # Clasify each row in grid cell:
 shape = (
     {
-        "divisions": 20,
+        "divisions": X_CELLS_IN_PLOT,
         "max": df["1y_implied_vol_percentile"].max(),
         "min": df["1y_implied_vol_percentile"].min(),
     },
-    {"divisions": 20, "max": df["vol_carry"].max(), "min": df["vol_carry"].min()},
+    {"divisions": Y_CELLS_IN_PLOT, "max": df["vol_carry"].max(), "min": df["vol_carry"].min()},
 )
 gridise = gridiserFactory(shape)
 df["cell"] = [
@@ -183,5 +184,7 @@ print(grouped_df.head())
 import matplotlib.pyplot as plt
 
 heat_matrix = pandas_to_heatmap_matrix(grouped_df, "coordinates", "hit_rate")
-plt.imshow(heat_matrix, cmap='hot', interpolation='nearest')
+plt.imshow(heat_matrix.T, cmap='hot', interpolation='nearest')
 plt.show()
+
+# %%
