@@ -1,4 +1,5 @@
 import csv
+import numpy as np
 import pandas as pd
 import datetime
 import time
@@ -76,3 +77,16 @@ def timed(func):
         return end - start
 
     return wrapper
+
+
+def pandas_to_heatmap_matrix(
+    df: pd.DataFrame, coords_col: str, z_col: str
+) -> np.ndarray:
+    xs = df[coords_col].apply(lambda val: val[0])
+    ys = df[coords_col].apply(lambda val: val[1])
+
+    matrix = np.zeros([max(xs) + 1, max(ys) + 1])
+    for _, row in df.iterrows():
+        x, y = row[coords_col]
+        matrix[x, y] = row[z_col]
+    return matrix
