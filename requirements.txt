@@ -1,4 +1,4 @@
-matplotlib == 
+matplotlib==3.3.4
 numpy==1.12.6
 pandas==0.24.2
 pytest
