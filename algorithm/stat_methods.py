@@ -30,9 +30,10 @@ def sum_squares_moving_window(arr: np.ndarray, window_size: int) -> np.ndarray:
 def calc_moving_annual_realised_vol(
     levels: np.ndarray, window_size: int, by_matrix: bool = True
 ) -> np.ndarray:
+    n = len(levels)
+    output = np.zeros(n)
+    output[:] = np.NaN
     if not by_matrix:
-        n = len(levels)
-        output = np.zeros(n)
         i = 0
         while i < n - window_size:
             in_levels = levels[i : i + window_size + 1]
@@ -40,12 +41,14 @@ def calc_moving_annual_realised_vol(
             i += 1
         return output[1:]
     else:
-        n = len(levels)
         levels_t_minus1 = np.zeros(n)
         levels_t_minus1[1:] = levels[:-1]
         log_returns = np.log((levels / levels_t_minus1)[1:])
         summed_squares = sum_squares_moving_window(log_returns, window_size)
-        return np.sqrt(252 * summed_squares / (window_size + 1))
+        output[window_size:] = np.sqrt(252 * summed_squares / (window_size + 1))[
+            window_size - 1 :
+        ]
+        return output[1:]
 
 
 def calc_percentile(arr: np.ndarray, value: float) -> float:
@@ -65,14 +68,13 @@ def calc_moving_percentile(arr: np.ndarray, window_size: int) -> np.ndarray:
     return output
 
 
-def forecast_vol(
-    levels: np.ndarray, vol_0: float, model_name: str, **params
-) -> np.ndarray:
+def forecast_vol(levels: np.ndarray, model_name: str, **params) -> np.ndarray:
     if model_name.lower() == "ema":
         log_returns = calc_log_returns(levels)
         λ = params["l"]
+        σ_0 = params["vol_0"]
         ema_vols = np.zeros(len(levels))
-        ema_vols[0] = vol_0
+        ema_vols[0] = σ_0
         for i, r in enumerate(log_returns):
             ema_vols[i + 1] = (λ * ema_vols[i] ** 2 + (1 - λ) * r ** 2) ** (0.5)
         return ema_vols

@@ -11,7 +11,7 @@ dummy_levels = np.array(
 
 
 expected_moving_reslised_vol = np.array(
-    [0, 0, 0.272, 0.199, 0.201, 0.423, 0.536, 0.538, 0.348]
+    [np.NaN, np.NaN, 0.272, 0.199, 0.201, 0.423, 0.536, 0.538, 0.348]
 )
 
 

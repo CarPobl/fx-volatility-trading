@@ -26,9 +26,9 @@ def test_sum_squares_moving_window():
 
 def test_calc_moving_annual_realised_vol():
     results = calc_moving_annual_realised_vol(test_data.dummy_levels, 3, False)
-    assert all(np.round(results, 3) == test_data.expected_moving_reslised_vol)
+    assert all(np.round(results, 3)[2:] == test_data.expected_moving_reslised_vol[2:])
     results = calc_moving_annual_realised_vol(test_data.dummy_levels, 3, True)
-    assert all(np.round(results, 3) == test_data.expected_moving_reslised_vol)
+    assert all(np.round(results, 3)[2:] == test_data.expected_moving_reslised_vol[2:])
 
 
 def test_calc_moving_perentile():
@@ -42,5 +42,5 @@ def test_calc_moving_perentile():
 
 def test_ema_forecast():
     vol_0 = 0.210
-    results = forecast_vol(test_data.dummy_levels, vol_0, "ema", l=0.9)
+    results = forecast_vol(test_data.dummy_levels, "ema", vol_0=vol_0, l=0.9)
     assert all(np.round(results, 3) == test_data.expected_ema_forecast)
