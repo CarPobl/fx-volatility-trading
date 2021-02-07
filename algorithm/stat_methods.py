@@ -69,7 +69,7 @@ def calc_moving_percentile(arr: np.ndarray, window_size: int) -> np.ndarray:
 
 
 def forecast_vol(levels: np.ndarray, model_name: str, **params) -> np.ndarray:
-    #TODO: Review implementation
+    # TODO: Review implementation
     if model_name.lower() == "ema":
         log_returns = calc_log_returns(levels)
         λ = params["l"]
@@ -87,6 +87,7 @@ def forecast_vol(levels: np.ndarray, model_name: str, **params) -> np.ndarray:
 
 def gridiserFactory(shape):
     arglength = len(shape)
+
     def fit_cell(dim, val):
         divisions = shape[dim]["divisions"]
         max_val, min_val = shape[dim]["max"], shape[dim]["min"]
@@ -94,13 +95,15 @@ def gridiserFactory(shape):
             raise ValueError(f"Value out of bounds in axis {dim}")
         normalised_val = (val - min_val) / (max_val - min_val)
         for i in range(divisions):
-            if normalised_val < 1/divisions * (i + 1):
-                return i 
+            if normalised_val < 1 / divisions * (i + 1):
+                return i
+
     def gridise(*args):
         if len(args) != arglength:
             raise TypeError(
-                f"This gridiser accepts {arglength} parameters; " \
+                f"This gridiser accepts {arglength} parameters; "
                 f"{len(args)} were provided."
             )
         return tuple([fit_cell(dim, val) for dim, val in enumerate(args)])
+
     return gridise

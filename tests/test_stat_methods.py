@@ -54,11 +54,10 @@ def test_gridiserFactory():
         {"divisions": 2, "max": 6, "min": -2},
     )
     gridise = gridiserFactory(shape)
-    assert gridise(-8.7, 0.1) == (0,0)
-    assert gridise(0, 0) == (2,0)
-    assert gridise(-3, 4) == (1,1)
+    assert gridise(-8.7, 0.1) == (0, 0)
+    assert gridise(0, 0) == (2, 0)
+    assert gridise(-3, 4) == (1, 1)
     with unittest.TestCase.assertRaises(None, ValueError):
         gridise(-10, 0)
     with unittest.TestCase.assertRaises(None, ValueError):
         gridise(0, 10)
-        

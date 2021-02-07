@@ -38,16 +38,13 @@ def test_variance_swap():
     trade = VarianceSwap(**kwargs)
     assert str(trade) == expected_str
 
-    assert trade.payoff(realised_vol=kwargs['strike']) == 0
+    assert trade.payoff(realised_vol=kwargs["strike"]) == 0
 
     # Examples as per varswap paper.
 
-    valuation_date = date(2020,4, 1)  # 3M after issuance
+    valuation_date = date(2020, 4, 1)  # 3M after issuance
     mtm = trade.calc_mtm(
-        realised_vol=15,
-        fair_strike=19,
-        r=0.02,
-        valuation_date=valuation_date
+        realised_vol=15, fair_strike=19, r=0.02, valuation_date=valuation_date
     )
     assert round(mtm) == -357_247
 
