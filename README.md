@@ -2,7 +2,7 @@
 The implementation of an FX Volatility Trading Model Using ML
 
 ## Description
-This a case study for SpinUp's recruiting process. Due to timing issues, the implemented code in this repository is not complete. The code is only compatible with python 3.6+ and contains a jupyter notebook that can be run to visualise the results. Alternatively, the same code is available in a regular python file.
+This is a case study for SpinUp's recruiting process. Due to timing issues, only a prototype has been implemented. I would be more than happy to discuss how it would be implemented in a production environment. Nonetheless, the code shows different styles of implementation, from figurative object-oriented and mid-level array maniulation (proper of production environments), to jupyter notebook algorithm prototyping.
 
 ## Getting started
 Simply run the following to clone the repo:
