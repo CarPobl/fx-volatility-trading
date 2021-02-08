@@ -63,8 +63,8 @@ df["1y_implied_vol_percentile"] = calc_moving_percentile(
 print(df.head())
 
 # Calculate forecasted 1M realised vol using EMA
-start = get_index_of_first(df["spot"], not_nan)
-first_year_spots = np.array(df["spot"].iloc[start : start + YEAR_WINDOW])
+start = get_index_of_first(np.array(df["spot"]), not_nan)
+first_year_spots = np.array(np.array(df["spot"].iloc[start : start + YEAR_WINDOW]))
 vol_0_monthly = calc_annual_realised_vol(first_year_spots) / (
     12 ** 0.5
 )  # From annualised to monthly
@@ -146,6 +146,6 @@ plot_cols = ["1y_implied_vol_percentile", "vol_carry", "profitable"]
 plot = PandasHeatMapPlot(df[plot_cols], x_cells_in_plot, y_cells_in_plot, *plot_cols)
 plot.show(
     xlabel="Vol Percentile(%)",
-    xlabel="Vol Carry(%)",
+    ylabel="Vol Carry(%)",
 )
 # %%
