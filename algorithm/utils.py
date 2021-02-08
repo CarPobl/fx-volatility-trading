@@ -57,7 +57,7 @@ def load_csv_data(
         for file_def in file_defs:
             filename = file_def.filename
             colname = file_def.colname
-            with open(filename) as f:
+            with open(filename, encoding="utf-8") as f:
                 reader = csv.DictReader(f)
                 for row in reader:
                     str_date = row[date_colname]
