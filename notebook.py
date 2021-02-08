@@ -2,17 +2,16 @@
 from algorithm import SPOT_DATA_FILE
 from algorithm import VOL_DATA_FILE
 
-from algorithm.utils import load_csv_data, FileDef, pandas_to_heatmap_matrix
+from algorithm.utils import load_csv_data, FileDef
 from algorithm.stat_methods import (
     calc_moving_annual_realised_vol,
     calc_moving_percentile,
     forecast_vol,
-    gridiserFactory,
 )
 from algorithm.trade_classes import VarianceSwap
+from algorithm.graphics import PandasHeatMapPlot
 
 import numpy as np
-import pandas as pd
 from datetime import timedelta
 
 
@@ -121,85 +120,18 @@ df["1m_realised_ema_vol_forecast"] = forecast_vol(
 df["vol_carry"] = df["1m_atmf_vol"] - df["1m_realised_ema_vol_forecast"]
 
 
-# Clasify each row in grid cell:
-# TODO: Encapsulate the below code and make more efficient.
-shape = (
-    {
-        "divisions": X_CELLS_IN_PLOT,
-        "max": df["1y_implied_vol_percentile"].max(),
-        "min": df["1y_implied_vol_percentile"].min(),
-    },
-    {"divisions": Y_CELLS_IN_PLOT, "max": df["vol_carry"].max(), "min": df["vol_carry"].min()},
-)
-gridise = gridiserFactory(shape)
-df["cell"] = [
-    str(gridise(row["1y_implied_vol_percentile"], row["vol_carry"]))
-    for _, row in df.iterrows()
-]
-df.dropna(inplace=True)
-
+# Mark trades that are profitable for each trade date
 df["profitable"] = df["payoff"] > 0
-grouping_cols = ["cell", "1y_implied_vol_percentile", "vol_carry", "profitable"]
-aggreg_df = df[grouping_cols]
 
-avg_df = pd.pivot_table(
-    aggreg_df,
-    index=["cell"],
-    values=["1y_implied_vol_percentile", "vol_carry"],
-    aggfunc=np.average,
-)
-
-count_df = pd.pivot_table(
-    aggreg_df,
-    index=["cell"],
-    values="profitable",
-    aggfunc=len,
-)
-count_df.columns = ["total_count"]
-
-sum_df = pd.pivot_table(
-    aggreg_df,
-    index=["cell"],
-    values="profitable",
-    aggfunc=sum,
-)
-sum_df.columns = ["positive_count"]
-
-grouped_df = pd.concat([avg_df, count_df, sum_df], axis=1)
-grouped_df["hit_rate"] = grouped_df["positive_count"] / grouped_df["total_count"]
-
-parse_tuple = lambda val: tuple(
-    int(num)
-    for num in val.replace("'", "")
-    .replace('"', "")
-    .replace("(", "")
-    .replace(")", "")
-    .split(",")
-)
-grouped_df["coordinates"] = [parse_tuple(val) for val in grouped_df.index]
-
-print(grouped_df.head())
 
 #%%
 # Plot heatmap
-# TODO: Improve plot (turn upside down, label axes...)
-
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-
-heat_matrix = pandas_to_heatmap_matrix(grouped_df, "coordinates", "hit_rate")
-min_x = grouped_df["1y_implied_vol_percentile"].min()
-max_x = grouped_df["1y_implied_vol_percentile"].max()
-min_y = grouped_df["vol_carry"].min()
-max_y = grouped_df["vol_carry"].max()
-
-indexes = np.round(np.linspace(min_x, max_x, X_CELLS_IN_PLOT) * 100)
-columns = np.round(np.linspace(min_y, max_y, Y_CELLS_IN_PLOT), 4) * 100
-plottable_df = pd.DataFrame(heat_matrix, columns=columns, index=indexes)
-plottable_df = plottable_df[np.sort(columns)[::-1]]
-ax = sns.heatmap(plottable_df.T)
-ax.set(xlabel="Vol Percentile (%)", ylabel='Vol Carry (%)')
-plt.show()
-
+plot_cols = ["1y_implied_vol_percentile", "vol_carry", "profitable"]
+plot = PandasHeatMapPlot(
+    df[plot_cols],
+    X_CELLS_IN_PLOT,
+    Y_CELLS_IN_PLOT,
+    *plot_cols
+)
+plot.show()
 # %%
