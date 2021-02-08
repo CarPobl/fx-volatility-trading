@@ -180,14 +180,26 @@ grouped_df["coordinates"] = [parse_tuple(val) for val in grouped_df.index]
 
 print(grouped_df.head())
 
-
+#%%
 # Plot heatmap
 # TODO: Improve plot (turn upside down, label axes...)
 
 import matplotlib.pyplot as plt
+import seaborn as sns
+
 
 heat_matrix = pandas_to_heatmap_matrix(grouped_df, "coordinates", "hit_rate")
-plt.imshow(heat_matrix.T, cmap='hot', interpolation='nearest')
+min_x = grouped_df["1y_implied_vol_percentile"].min()
+max_x = grouped_df["1y_implied_vol_percentile"].max()
+min_y = grouped_df["vol_carry"].min()
+max_y = grouped_df["vol_carry"].max()
+
+indexes = np.round(np.linspace(min_x, max_x, X_CELLS_IN_PLOT) * 100)
+columns = np.round(np.linspace(min_y, max_y, Y_CELLS_IN_PLOT), 4) * 100
+plottable_df = pd.DataFrame(heat_matrix, columns=columns, index=indexes)
+plottable_df = plottable_df[np.sort(columns)[::-1]]
+ax = sns.heatmap(plottable_df.T)
+ax.set(xlabel="Vol Percentile (%)", ylabel='Vol Carry (%)')
 plt.show()
 
 # %%
