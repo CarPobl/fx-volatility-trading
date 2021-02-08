@@ -3,11 +3,11 @@ import numpy as np
 import math
 
 
-def calc_log_returns(levels: np.ndarray):
+def calc_log_returns(levels: np.ndarray, window_size: int = 1):
     n = len(levels)
-    levels_t_minus1 = np.zeros(n)
-    levels_t_minus1[1:] = levels[:-1]
-    return np.log((levels / levels_t_minus1)[1:])
+    levels_t_minus_s = np.zeros(n)
+    levels_t_minus_s[window_size:] = levels[:-window_size]
+    return np.log((levels / levels_t_minus_s)[window_size:])
 
 
 def calc_annual_realised_vol(levels: np.ndarray) -> np.ndarray:
@@ -69,21 +69,17 @@ def calc_moving_percentile(arr: np.ndarray, window_size: int) -> np.ndarray:
     return output
 
 
-def forecast_vol(levels: np.ndarray, model_name: str, **params) -> np.ndarray:
-    # TODO: Review implementation.
-    if model_name.lower() == "ema":
-        log_returns = calc_log_returns(levels)
-        λ = params["l"]
-        σ_0 = params["vol_0"]
-        ema_vols = np.zeros(len(levels))
-        ema_vols[0] = σ_0
-        for i, r in enumerate(log_returns):
-            ema_vols[i + 1] = (λ * ema_vols[i] ** 2 + (1 - λ) * r ** 2) ** (0.5)
-        return ema_vols
-
-    #  Implement further vol forecast models ...
-    else:
-        raise ValueError(f"Unkown model_name '{model_name}'.")
+def forecast_ema_vol(
+    levels: np.ndarray, vol_0: float, window_size: int = 1, _lambda: float = 0.9
+) -> np.ndarray:
+    log_returns = calc_log_returns(levels, window_size)
+    σ_0 = vol_0
+    λ = _lambda
+    ema_vols = np.zeros(len(levels))
+    ema_vols[0] = σ_0
+    for i, r in enumerate(log_returns):
+        ema_vols[i + 1] = (λ * ema_vols[i] ** 2 + (1 - λ) * r ** 2) ** (0.5)
+    return ema_vols
 
 
 def gridiserFactory(shape: tuple) -> callable:

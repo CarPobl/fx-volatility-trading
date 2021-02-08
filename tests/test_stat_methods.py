@@ -3,7 +3,7 @@ from algorithm.stat_methods import (
     sum_squares_moving_window,
     calc_moving_annual_realised_vol,
     calc_moving_percentile,
-    forecast_vol,
+    forecast_ema_vol,
     gridiserFactory,
 )
 
@@ -44,7 +44,7 @@ def test_calc_moving_perentile():
 
 def test_ema_forecast():
     vol_0 = 0.210
-    results = forecast_vol(test_data.dummy_levels, "ema", vol_0=vol_0, l=0.9)
+    results = forecast_ema_vol(test_data.dummy_levels, vol_0=vol_0, _lambda=0.9)
     assert all(np.round(results, 3) == test_data.expected_ema_forecast)
 
 

@@ -11,7 +11,7 @@ from algorithm.utils import (
 from algorithm.stat_methods import (
     calc_annual_realised_vol,
     calc_moving_percentile,
-    forecast_vol,
+    forecast_ema_vol,
 )
 from algorithm.trade_classes import VarianceSwap
 from algorithm.graphics import PandasHeatMapPlot
@@ -20,13 +20,13 @@ import numpy as np
 from datetime import timedelta
 
 not_nan = lambda val: not np.isnan(val)
-YEAR_WINDOW = 252 # 1Y (in business_days)
+YEAR_WINDOW = 252  # 1Y (in business_days)
 
 
 #%%
 # Imputs
 swap_window_size = 21  # 1M (in business_days)
-percentile_window_size = YEAR_WINDOW  
+percentile_window_size = YEAR_WINDOW
 ema_lambda = 0.97
 
 x_cells_in_plot = 20
@@ -64,15 +64,21 @@ print(df.head())
 
 # Calculate forecasted 1M realised vol using EMA
 start = get_index_of_first(df["spot"], not_nan)
-first_year_spots = np.array(df["spot"].iloc[start:start + YEAR_WINDOW])
-vol_0_monthly = calc_annual_realised_vol(first_year_spots) / (12 ** 0.5) # From annualised to monthly
+first_year_spots = np.array(df["spot"].iloc[start : start + YEAR_WINDOW])
+vol_0_monthly = calc_annual_realised_vol(first_year_spots) / (
+    12 ** 0.5
+)  # From annualised to monthly
 
 df["1m_realised_ema_vol_forecast"] = np.NaN
-df["1m_realised_ema_vol_forecast"][start:] = forecast_vol(
-    np.array(df["spot"].iloc[start:]), "ema", vol_0=vol_0_monthly, l=ema_lambda
+df["1m_realised_ema_vol_forecast"][start:] = forecast_ema_vol(
+    levels=np.array(df["spot"].iloc[start:]),
+    vol_0=vol_0_monthly,
+    window_size=swap_window_size,
+    _lambda=ema_lambda
 )
 print(df.head())
 
+#%%
 # Remove null values araising from window discrepancies
 df.dropna(inplace=True)
 print(df.head())
@@ -139,11 +145,6 @@ df["profitable"] = df["payoff"] > 0
 #%%
 # Plot heatmap
 plot_cols = ["1y_implied_vol_percentile", "vol_carry", "profitable"]
-plot = PandasHeatMapPlot(
-    df[plot_cols],
-    x_cells_in_plot,
-    y_cells_in_plot,
-    *plot_cols
-)
+plot = PandasHeatMapPlot(df[plot_cols], x_cells_in_plot, y_cells_in_plot, *plot_cols)
 plot.show()
 # %%
