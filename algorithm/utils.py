@@ -1,3 +1,4 @@
+from typing import Iterable, Any
 import csv
 import numpy as np
 import pandas as pd
@@ -77,3 +78,10 @@ def timed(func):
         return end - start
 
     return wrapper
+
+
+def get_index_of_first(iterable: Iterable, cond: callable) -> Any:
+    """Get index of first element that satisfies a condition"""
+    for indx, ele in enumerate(iterable):
+        if cond(ele):
+            return indx

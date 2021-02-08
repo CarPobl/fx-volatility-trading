@@ -1,10 +1,15 @@
 #%%
+# Packages, constants and utils:
 from algorithm import SPOT_DATA_FILE
 from algorithm import VOL_DATA_FILE
 
-from algorithm.utils import load_csv_data, FileDef
+from algorithm.utils import (
+    FileDef,
+    load_csv_data,
+    get_index_of_first,
+)
 from algorithm.stat_methods import (
-    calc_moving_annual_realised_vol,
+    calc_annual_realised_vol,
     calc_moving_percentile,
     forecast_vol,
 )
@@ -14,16 +19,23 @@ from algorithm.graphics import PandasHeatMapPlot
 import numpy as np
 from datetime import timedelta
 
+not_nan = lambda val: not np.isnan(val)
+YEAR_WINDOW = 252 # 1Y (in business_days)
 
+
+#%%
+# Imputs
 swap_window_size = 21  # 1M (in business_days)
-percentile_window_size = 252  # 1Y (in business_days)
+percentile_window_size = YEAR_WINDOW  
 ema_lambda = 0.97
-X_CELLS_IN_PLOT = 20
-Y_CELLS_IN_PLOT = 30
 
-T_swap = swap_window_size / 252  # (in years)
+x_cells_in_plot = 20
+y_cells_in_plot = 30
+
+T_swap = swap_window_size / YEAR_WINDOW  # (in years)
 
 
+#%%
 # Load Market data
 file_defs = [
     FileDef(filename=SPOT_DATA_FILE, colname="spot"),
@@ -32,22 +44,40 @@ file_defs = [
 df = load_csv_data(*file_defs)
 
 
-# Clean data
+#%%
+# Sort loaded data
 df.sort_values(by="date", ascending=True, inplace=True)
+
+#%%
+# Volatilities
+
+# Convert annualised implied vol to monthly vol
 df["1m_annualised_atmf_vol"] = df["1m_annualised_atmf_vol"] / 100
 df["1m_atmf_vol"] = df["1m_annualised_atmf_vol"] * (swap_window_size / 252) ** 0.5
-df.dropna(inplace=True)
-# df["1m_atmf_vol_1m_prior"] = np.NaN
-# df["1m_atmf_vol_1m_prior"][swap_window_size:] = df["1m_atmf_vol"][:-swap_window_size]
 
-
-# Calculate realised volatility using a 1-year window
-df["1m_realised_annualised_vol"] = np.NaN
-df["1m_realised_annualised_vol"][1:] = calc_moving_annual_realised_vol(
-    np.array(df["spot"]), swap_window_size
+# Calculate implied volatility percentile for a 1-year window
+df["1y_implied_vol_percentile"] = np.NaN
+df["1y_implied_vol_percentile"] = calc_moving_percentile(
+    np.array(df["1m_atmf_vol"]), percentile_window_size
 )
+print(df.head())
 
+# Calculate forecasted 1M realised vol using EMA
+start = get_index_of_first(df["spot"], not_nan)
+first_year_spots = np.array(df["spot"].iloc[start:start + YEAR_WINDOW])
+vol_0_monthly = calc_annual_realised_vol(first_year_spots) / (12 ** 0.5) # From annualised to monthly
 
+df["1m_realised_ema_vol_forecast"] = np.NaN
+df["1m_realised_ema_vol_forecast"][start:] = forecast_vol(
+    np.array(df["spot"].iloc[start:]), "ema", vol_0=vol_0_monthly, l=ema_lambda
+)
+print(df.head())
+
+# Remove null values araising from window discrepancies
+df.dropna(inplace=True)
+print(df.head())
+
+# %%
 # Create a trade to be traded every day at the fair strike K,
 # with a variance notional of 1, and maturing in 1M.
 # For this, calculate K_fair using a rule-of-thumb described
@@ -98,24 +128,6 @@ for indx, pair in enumerate(df.iterrows()):
 df["fair_trade"] = fair_trades
 df["payoff"] = payoffs
 
-
-# Calculate implied volatility percentile for a 1-year window
-df["1y_implied_vol_percentile"] = np.NaN
-df["1y_implied_vol_percentile"] = calc_moving_percentile(
-    np.array(df["1m_atmf_vol"]), percentile_window_size
-)
-df.dropna(inplace=True)
-
-
-# Calculate forecasted 1M realised EMA vol
-vol_0 = df["1m_realised_annualised_vol"].iloc[0] / (
-    12 ** 0.5
-)  # From annualised to monthly
-df["1m_realised_ema_vol_forecast"] = forecast_vol(
-    np.array(df["spot"]), "ema", vol_0=vol_0, l=ema_lambda
-)
-
-
 # Calculate Vol Carry
 df["vol_carry"] = df["1m_atmf_vol"] - df["1m_realised_ema_vol_forecast"]
 
@@ -129,8 +141,8 @@ df["profitable"] = df["payoff"] > 0
 plot_cols = ["1y_implied_vol_percentile", "vol_carry", "profitable"]
 plot = PandasHeatMapPlot(
     df[plot_cols],
-    X_CELLS_IN_PLOT,
-    Y_CELLS_IN_PLOT,
+    x_cells_in_plot,
+    y_cells_in_plot,
     *plot_cols
 )
 plot.show()
