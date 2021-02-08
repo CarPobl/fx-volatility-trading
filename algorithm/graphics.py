@@ -33,16 +33,18 @@ class PandasHeatMapPlot:
         pcolname: the name of the column with bool values
             coordinates
         """
+        self._xdivs = xdivs
+        self._ydivs = ydivs
         self._grouped_df = self._data_to_grid(
             df, xdivs, ydivs, xcolname, ycolname, pcolname
         )
         self._heat_matrix = self._pandas_to_heatmap_matrix(
             self._grouped_df, "coordinates", "hit_rate"
         )
-        self.min_x = df[xcolname].min()
-        self.max_x = df[xcolname].max()
-        self.min_y = df[ycolname].min()
-        self.max_y = df[ycolname].max()
+        self._min_x = df[xcolname].min()
+        self._max_x = df[xcolname].max()
+        self._min_y = df[ycolname].min()
+        self._max_y = df[ycolname].max()
 
     @classmethod
     def _data_to_grid(
@@ -60,26 +62,26 @@ class PandasHeatMapPlot:
         )
         gridise = gridiserFactory(shape)
         df["cell"] = [
-            str(gridise(row[xcolname], row[ydivs])) for _, row in df.iterrows()
+            str(gridise(row[xcolname], row[ycolname])) for _, row in df.iterrows()
         ]
-        return cls._group_dataframe(df, xdivs, ydivs, xcolname, pcolname)
+        return cls._group_dataframe(df, xcolname, ycolname, pcolname)
 
     @classmethod
     def _group_dataframe(
         cls,
         df: pd.DataFrame,
-        ydivs: float,
         xcolname: str,
+        ycolname: float,
         pcolname: str,
     ) -> pd.DataFrame:
-        # TODO: Perform grouping without pandas to make it more efficient
-        grouping_cols = ["cell", xcolname, ydivs, pcolname]
+        # TODO: Perform grouping without pandas and make more efficient
+        grouping_cols = ["cell", xcolname, ycolname, pcolname]
         aggreg_df = df[grouping_cols]
 
         avg_df = pd.pivot_table(
             aggreg_df,
             index=["cell"],
-            values=[xcolname, ydivs],
+            values=[xcolname, ycolname],
             aggfunc=np.average,
         )
         count_df = pd.pivot_table(
@@ -99,8 +101,8 @@ class PandasHeatMapPlot:
         sum_df.columns = ["positive_count"]
 
         grouped_df = pd.concat([avg_df, count_df, sum_df], axis=1)
-        grouped_df.hit_rate = grouped_df.positive_count / grouped_df.total_count
-        grouped_df.coordinates = [cls._parse_tuple(val) for val in grouped_df.index]
+        grouped_df["hit_rate"] = grouped_df.positive_count / grouped_df.total_count
+        grouped_df["coordinates"] = [cls._parse_tuple(val) for val in grouped_df.index]
         return grouped_df
 
     @staticmethod
@@ -134,9 +136,10 @@ class PandasHeatMapPlot:
             xlabel: label for the x-axis
             ylabel: label for the y-axis
         """
-        indexes = np.round(np.linspace(self.min_x, self.max_x, self.xdivs) * 100)
-        columns = np.round(np.linspace(self.min_y, self.max_y, self.ydivs), 4) * 100
-        plottable_df = pd.DataFrame(self.heat_matrix, columns=columns, index=indexes)
+        # TODO: Improve plot presentation
+        indexes = np.round(np.linspace(self._min_x, self._max_x, self._xdivs) * 100)
+        columns = np.round(np.linspace(self._min_y, self._max_y, self._ydivs), 4) * 100
+        plottable_df = pd.DataFrame(self._heat_matrix, columns=columns, index=indexes)
         plottable_df = plottable_df[np.sort(columns)[::-1]]
         ax = sns.heatmap(plottable_df.T)
         ax.set(xlabel=xlabel, ylabel=ylabel)
