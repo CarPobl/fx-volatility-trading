@@ -133,18 +133,19 @@ for indx, pair in enumerate(df.iterrows()):
 
 df["fair_trade"] = fair_trades
 df["payoff"] = payoffs
-
-# Calculate Vol Carry
-df["vol_carry"] = df["1m_atmf_vol"] - df["1m_realised_ema_vol_forecast"]
-
-
-# Mark trades that are profitable for each trade date
 df["profitable"] = df["payoff"] > 0
+
+#%%
+# Calculate Vol Carry and mark trades that are profitable for each trade date
+df["vol_carry"] = df["1m_atmf_vol"] - df["1m_realised_ema_vol_forecast"]
 
 
 #%%
 # Plot heatmap
 plot_cols = ["1y_implied_vol_percentile", "vol_carry", "profitable"]
 plot = PandasHeatMapPlot(df[plot_cols], x_cells_in_plot, y_cells_in_plot, *plot_cols)
-plot.show()
+plot.show(
+    xlabel="Vol Percentile(%)",
+    xlabel="Vol Carry(%)",
+)
 # %%
