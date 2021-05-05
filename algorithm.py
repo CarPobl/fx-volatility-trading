@@ -16,8 +16,17 @@ from algorithm.stat_methods import (
 from algorithm.trade_classes import VarianceSwap
 from algorithm.graphics import PandasHeatMapPlot
 
+import os
 import numpy as np
 from datetime import timedelta
+import logging
+
+from qiskit import BasicAer
+from qiskit.circuit.library import ZZFeatureMap
+from qiskit.aqua import QuantumInstance
+from qiskit.aqua.algorithms import QSVM
+from qiskit.providers.ibmq import IBMQAccountError
+
 
 not_nan = lambda val: not np.isnan(val)
 YEAR_WINDOW = 252  # 1Y (in business_days)
@@ -74,7 +83,7 @@ df["1m_realised_ema_vol_forecast"][start:] = forecast_ema_vol(
     levels=np.array(df["spot"].iloc[start:]),
     vol_0=vol_0_monthly,
     window_size=swap_window_size,
-    _lambda=ema_lambda
+    _lambda=ema_lambda,
 )
 print(df.head())
 
@@ -149,3 +158,41 @@ plot.show(
     ylabel="Vol Carry(%)",
 )
 # %%
+# Feeding results to QSVM to train the model
+seed = 0
+
+# Prepare the training data and test data
+ml_cols = [col for col in plot_cols if col != "profitable"]
+msk = np.random.rand(len(df)) < 0.75  # Train with 75% of data
+train_df = df[msk]
+test_df = df[~msk]
+
+to_ndarr_dict = lambda x: {
+    "profitable": x[x.profitable][ml_cols].values,
+    "non_profitable": x[~x.profitable][ml_cols].values,
+}
+
+training_input = to_ndarr_dict(train_df)
+test_input = to_ndarr_dict(test_df)
+
+feature_map = ZZFeatureMap(feature_dimension=2, reps=2, entanglement="full")
+qsvm = QSVM(feature_map, training_input, test_input)
+
+api_token = os.environ["IBM_API_TOKEN"]  # Obtain the IBM API token from env variables
+
+# %%
+logging.getLogger("qiskit.providers.ibmq").setLevel(logging.WARNING)
+from qiskit import IBMQ
+
+try:
+    IBMQ.enable_account(api_token)
+except IBMQAccountError:
+    pass
+
+provider = IBMQ.get_provider(hub="ibm-q")
+backend = provider.backends()[0]
+quantum_instance = QuantumInstance(
+    backend, shots=1024, seed_simulator=seed, seed_transpiler=seed
+)
+
+result = qsvm.run(quantum_instance)
